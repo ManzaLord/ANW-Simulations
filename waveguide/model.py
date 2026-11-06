@@ -5,6 +5,7 @@ import numpy as np
 from pathlib import Path
 from scipy.linalg import eigh
 from numba import njit, prange
+from tqdm.auto import tqdm
 
 warnings.filterwarnings("ignore")
 
@@ -293,8 +294,20 @@ class waveguide:
         time_diag = 0
         time_sim = 0
 
+        #Calcula la cantidad total de simulaciones
+        total_runs = sum(
+            1 if c == 0 and b == 0 else runsQty
+            for c in kap_C for b in kap_B
+        )
+
+        #Inicializa la barra de progreso
+        pbar = tqdm(total=total_runs, desc="Disorder", unit="run")
+
         for i in range(len(kap_C)):
             for k in range(len(kap_B)):
+
+                pbar.set_postfix(kap_B=kap_B[k], kap_C=kap_C[i])
+
                 for j in range(runsQty):
                     
                     t0 = time.time()
@@ -343,6 +356,7 @@ class waveguide:
                         schmidt_av[i, k]  += self.schmidt_dis
     
                     time_sim += time.time() - t0
+                    pbar.update(1)
         
                     if kap_C[i] == 0 and kap_B[k] == 0:
                         break
@@ -363,6 +377,8 @@ class waveguide:
                     dist_prob_av[i, k]   = dist_prob_av[i, k]   / runsQty
                     if calc_schmidt:
                         schmidt_av[i, k] = schmidt_av[i, k] / runsQty
+
+        pbar.close()
 
         #Muestra los tiempo de duracion de la simulacion
         print('Diagonalization time =', time_diag)
